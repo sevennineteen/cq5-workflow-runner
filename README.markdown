@@ -13,7 +13,7 @@ Customize **INSTANCE-SPECIFIC CONSTANTS** as follows:
 * `PASSWORD`: CQ password
 
 * `SEARCH_ROOT_PATH`: branch/folder within which to execute your query
-* `WORKFLOW_MODEL`: path to the workflow model to be run across query result set
+* `WORKFLOW_MODELS`: list of paths to the workflow models to be run across query result set
 * `QUERY_PARAMS`: dictionary of parameters specifying criteria for inclusion
 
 In short, `SEARCH_ROOT_PATH` and `QUERY_PARAMS` define the *scope* of objects to be processed, and `WORKFLOW_MODEL` dictates what processing will happen.

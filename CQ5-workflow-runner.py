@@ -12,8 +12,8 @@ CQ_SERVER = 'http://localhost:4502'
 USERNAME = 'admin'
 PASSWORD = 'admin'
 
-SEARCH_ROOT_PATH = '/content/dam'
-WORKFLOW_MODEL = '/etc/workflow/models/dam/update_asset'
+SEARCH_ROOT_PATH = '/content/dam/'
+WORKFLOW_MODELS = ['/etc/workflow/models/dam/dam_set_last_modified', '/etc/workflow/models/dam/update_asset']
 QUERY_PARAMS = {    'path': SEARCH_ROOT_PATH,
                     'type': 'dam:Asset',
                     'nodename': '*.jpg',
@@ -51,7 +51,7 @@ def start_workflow(model, payload, url=WORKFLOW_URL, headers=CQ_AUTH_HEADER):
     "Starts a workflow for the specified payload."
     try:
         http = httplib2.Http()
-        data = {    'model': WORKFLOW_MODEL + '/jcr:content/model',
+        data = {    'model': model + '/jcr:content/model',
                     'payload': payload,
                     'payloadType': 'JCR_PATH',
                     'workflowTitle': uuid4().hex
@@ -69,4 +69,4 @@ resources = execute_query()
 print 'Query returned %s resources.' % len(resources)
 for r in resources:
     print '(%s/%s)' % (resources.index(r) + 1, len(resources))
-    start_workflow(WORKFLOW_MODEL, r)
+    map(lambda w: start_workflow(w, r), WORKFLOW_MODELS)
