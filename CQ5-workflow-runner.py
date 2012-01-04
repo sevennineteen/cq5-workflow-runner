@@ -1,5 +1,6 @@
-"This script initiates a CQ workflow against resources returned by the supplied query."
+"This script initiates CQ workflows against resources returned by the supplied query."
 
+import logging
 import simplejson as json
 import httplib2
 import urllib
@@ -8,18 +9,36 @@ from uuid import uuid4
 
 #----------------------------------------------------------
 # INSTANCE-SPECIFIC CONSTANTS // customize before running
-CQ_SERVER = 'http://localhost:4502'
+CQ_HOSTNAME = 'localhost'
+CQ_SERVER = 'http://%s:4502' % CQ_HOSTNAME
 USERNAME = 'admin'
 PASSWORD = 'admin'
 
-SEARCH_ROOT_PATH = '/content/dam/'
-WORKFLOW_MODELS = ['/etc/workflow/models/dam/dam_set_last_modified', '/etc/workflow/models/dam/update_asset']
+SEARCH_ROOT_PATH = '/content/dam'
+WORKFLOW_MODELS = [ '/etc/workflow/models/dam/update_asset',
+                    '/etc/workflow/models/dam/dam_set_last_modified'
+                    ]
 QUERY_PARAMS = {    'path': SEARCH_ROOT_PATH,
                     'type': 'dam:Asset',
-                    'nodename': '*.jpg',
+                    #'nodename': '*.jpg',
+                    'group.p.or': 'true',
+                    'group.1_nodename': '*.jpg',
+                    'group.2_nodename': '*.gif',
                     'p.limit': '-1'
                     }
 #----------------------------------------------------------
+
+# Initialize logging
+logging.basicConfig(    filename='workflow-runner-%s.log' % CQ_HOSTNAME,
+                        format='%(asctime)s %(levelname)-6s %(message)s',
+                        level=logging.INFO,
+                        filemode='a'
+                        )
+console = logging.StreamHandler()
+console.setLevel(logging.DEBUG)
+formatter = logging.Formatter('%(levelname)-6s%(message)s')
+console.setFormatter(formatter)
+logging.getLogger('').addHandler(console)
 
 def cq_auth_header(username, password):
     "Converts user credentials to CQ-required request header."
@@ -36,6 +55,7 @@ CQ_AUTH_HEADER = cq_auth_header(USERNAME, PASSWORD)
     
 def execute_query(url=QUERYBUILDER_URL, headers=CQ_AUTH_HEADER):
     "Executes querybuilder query and returns resources in JSON result set."
+    logging.info('Executing query: %s' % url)
     try:
         http = httplib2.Http()
         response = http.request(url, headers=headers)
@@ -44,8 +64,8 @@ def execute_query(url=QUERYBUILDER_URL, headers=CQ_AUTH_HEADER):
         results = json.loads(response[1])
         return [x['path'] for x in results['hits']]
     except Exception, e:
-        print '!!! Failed to execute query with URL: %s.' % url
-        print '--> %s' % e.message
+        logging.error('!!! Failed to execute query with URL: %s.' % url)
+        logging.error('--> %s' % e.message)
 
 def start_workflow(model, payload, url=WORKFLOW_URL, headers=CQ_AUTH_HEADER):
     "Starts a workflow for the specified payload."
@@ -60,13 +80,19 @@ def start_workflow(model, payload, url=WORKFLOW_URL, headers=CQ_AUTH_HEADER):
         response = http.request(url, headers=headers, method='POST', body=urllib.urlencode(data))
         if response[0].status != 201:
             raise Exception, 'Unexpected response status (%s)' % response[0].status
-        print '\tStarted workflow for %s (%s)' % (payload, data['workflowTitle'])
+        logging.info('Started workflow %s for %s (%s)' % (model.replace('/etc/workflow/models', ''), payload, data['workflowTitle']))
     except Exception, e:
-        print '!!! Failed to start workflow for %s.' % payload
-        print '--> %s' % e.message
+        logging.error('Failed to start workflow %s for %s.' % (model.replace('/etc/workflow/models', ''), payload))
+        logging.error('--> %s' % e.message)
+        try:
+            logging.error(response[1])
+        except:
+            pass
 
+logging.info('-' * 150)
 resources = execute_query()
-print 'Query returned %s resources.' % len(resources)
+logging.info('Query returned %s resources.' % len(resources))
 for r in resources:
     print '(%s/%s)' % (resources.index(r) + 1, len(resources))
     map(lambda w: start_workflow(w, r), WORKFLOW_MODELS)
+logging.info('-' * 150)

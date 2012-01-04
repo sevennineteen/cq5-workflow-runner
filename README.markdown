@@ -8,7 +8,7 @@ This script may be used to initiate CQ5 workflows against multiple CRX resources
 
 Customize **INSTANCE-SPECIFIC CONSTANTS** as follows:
 
-* `CQ_SERVER`: CQ server address
+* `CQ_HOSTNAME`: CQ server host name
 * `USERNAME`: CQ username
 * `PASSWORD`: CQ password
 
